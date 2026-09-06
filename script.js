@@ -31,15 +31,20 @@ function divide(a, b) {
 }
 
 function operate(operator, a, b) {
+  let result;
   if (operator === "+") {
-    return add(a, b);
+    result = add(a, b);
   } else if (operator === "-") {
-    return subtract(a, b);
+    result = subtract(a, b);
   } else if (operator === "×") {
-    return multiply(a, b);
+    result = multiply(a, b);
   } else if (operator === "÷") {
-    return divide(a, b);
+    result = divide(a, b);
   }
+  if (typeof result === "number") {
+    return Number(result.toFixed(10));
+  }
+  return result;
 }
 
 numberButtons.forEach(function (button) {
@@ -55,9 +60,19 @@ numberButtons.forEach(function (button) {
 
 operatorButtons.forEach(function (button) {
   button.addEventListener("click", function () {
-    firstNumber = Number(currentInput);
+    if (firstNumber === null) {
+      firstNumber = Number(currentInput);
+    } else if (currentInput !== "") {
+      const secondNumber = Number(currentInput);
+      const result = operate(operator, firstNumber, secondNumber);
+
+      display.textContent = result;
+      firstNumber = result;
+    }
+
     operator = button.textContent;
     currentInput = "";
+    justCalculated = false;
   });
 });
 
