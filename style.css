@@ -31,14 +31,14 @@ body {
   overflow: hidden;
 }
 
-buttons {
+.buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
 button {
-  width: calc((100% -30px) / 4);
+  width: calc((100% - 30px) / 4);
   min-height: 55px;
   border: 1px solid #999;
   border-radius: 6px;
