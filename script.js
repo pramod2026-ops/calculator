@@ -66,10 +66,16 @@ operatorButtons.forEach(function (button) {
       const secondNumber = Number(currentInput);
       const result = operate(operator, firstNumber, secondNumber);
 
+      if (result === "Error") {
+        display.textContent = result;
+        firstNumber = null;
+        currentInput = "";
+        justCalculated = true;
+        return;
+      }
       display.textContent = result;
       firstNumber = result;
     }
-
     operator = button.textContent;
     currentInput = "";
     justCalculated = false;
@@ -98,6 +104,11 @@ clearButton.addEventListener("click", function () {
 });
 
 decimalButton.addEventListener("click", function () {
+  if (justCalculated) {
+    currentInput = "";
+    justCalculated = false;
+  }
+
   if (!currentInput.includes(".")) {
     currentInput += ".";
     display.textContent = currentInput;
