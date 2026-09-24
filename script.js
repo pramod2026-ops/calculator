@@ -1,116 +1,111 @@
 "use strict";
 
 const display = document.querySelector("#display");
-const numberButtons = document.querySelectorAll(".number");
-const operatorButtons = document.querySelectorAll(".operator");
-const decimalButton = document.querySelector(".decimal");
-const equalsButton = document.querySelector(".equals");
-const clearButton = document.querySelector(".clear");
+const buttons = document.querySelector(".buttons");
 
 let currentInput = "";
-let firstNumber = null;
-let operator = null;
-let justCalculated = false;
+let storedValue = null;
+let pendingOperator = null;
+let replaceInput = false;
 
-function add(a, b) {
-  return a + b;
+function render(value = currentInput || "0") {
+  display.textContent = value;
 }
 
-function subtract(a, b) {
-  return a - b;
-}
-
-function multiply(a, b) {
-  return a * b;
-}
-
-function divide(a, b) {
-  if (b === 0) {
-    return "Error";
-  } else return a / b;
-}
-
-function operate(operator, a, b) {
-  let result;
-  if (operator === "+") {
-    result = add(a, b);
-  } else if (operator === "-") {
-    result = subtract(a, b);
-  } else if (operator === "×") {
-    result = multiply(a, b);
-  } else if (operator === "÷") {
-    result = divide(a, b);
-  }
-  if (typeof result === "number") {
-    return Number(result.toFixed(10));
-  }
-  return result;
-}
-
-numberButtons.forEach(function (button) {
-  button.addEventListener("click", function () {
-    if (justCalculated) {
-      currentInput = "";
-      justCalculated = false;
-    }
-    currentInput += button.textContent;
-    display.textContent = currentInput;
-  });
-});
-
-operatorButtons.forEach(function (button) {
-  button.addEventListener("click", function () {
-    if (firstNumber === null) {
-      firstNumber = Number(currentInput);
-    } else if (currentInput !== "") {
-      const secondNumber = Number(currentInput);
-      const result = operate(operator, firstNumber, secondNumber);
-
-      if (result === "Error") {
-        display.textContent = result;
-        firstNumber = null;
-        currentInput = "";
-        justCalculated = true;
-        return;
-      }
-      display.textContent = result;
-      firstNumber = result;
-    }
-    operator = button.textContent;
-    currentInput = "";
-    justCalculated = false;
-  });
-});
-
-equalsButton.addEventListener("click", function () {
-  if (firstNumber === null || operator === null || currentInput === "") {
-    return;
-  }
-  const secondNumber = Number(currentInput);
-  const result = operate(operator, firstNumber, secondNumber);
-
-  display.textContent = result;
-  currentInput = String(result);
-  firstNumber = null;
-  operator = null;
-  justCalculated = true;
-});
-
-clearButton.addEventListener("click", function () {
+function clear() {
   currentInput = "";
-  firstNumber = null;
-  operator = null;
-  display.textContent = "0";
+  storedValue = null;
+  pendingOperator = null;
+  replaceInput = false;
+  render();
+}
+
+function enterDigit(digit) {
+  if (replaceInput || currentInput === "Error") currentInput = "";
+  replaceInput = false;
+  if (currentInput.replace(".", "").length >= 15) return;
+  currentInput = currentInput === "0" ? digit : currentInput + digit;
+  render();
+}
+
+function enterDecimal() {
+  if (replaceInput || currentInput === "Error") currentInput = "";
+  replaceInput = false;
+  if (!currentInput.includes(".")) currentInput = `${currentInput || "0"}.`;
+  render();
+}
+
+function calculate(a, b, op) {
+  if (op === "+") return a + b;
+  if (op === "−") return a - b;
+  if (op === "×") return a * b;
+  if (op === "÷") return b === 0 ? null : a / b;
+  return b;
+}
+
+function format(value) {
+  if (!Number.isFinite(value)) return "Error";
+  return String(Number(value.toPrecision(11)));
+}
+
+function showResult(value) {
+  if (value === null || !Number.isFinite(value)) {
+    currentInput = "Error";
+    storedValue = null;
+    pendingOperator = null;
+    render("Error");
+    replaceInput = true;
+    return false;
+  }
+  currentInput = format(value);
+  render(currentInput);
+  return true;
+}
+
+function chooseOperator(op) {
+  if (currentInput === "Error") return;
+  const inputValue = currentInput === "" ? null : Number(currentInput);
+
+  if (pendingOperator && inputValue !== null && !replaceInput) {
+    const result = calculate(storedValue, inputValue, pendingOperator);
+    if (!showResult(result)) return;
+    storedValue = Number(currentInput);
+  } else if (inputValue !== null && storedValue === null) {
+    storedValue = inputValue;
+  }
+
+  pendingOperator = op;
+  currentInput = "";
+  replaceInput = false;
+}
+
+function equals() {
+  if (!pendingOperator || storedValue === null) return;
+  const right = currentInput === "" ? storedValue : Number(currentInput);
+  const result = calculate(storedValue, right, pendingOperator);
+  pendingOperator = null;
+  storedValue = null;
+  if (showResult(result)) replaceInput = true;
+}
+
+buttons.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  if (button.dataset.digit !== undefined) enterDigit(button.dataset.digit);
+  else if (button.dataset.action === "decimal") enterDecimal();
+  else if (button.dataset.operator) chooseOperator(button.dataset.operator);
+  else if (button.dataset.action === "equals") equals();
+  else if (button.dataset.action === "clear") clear();
 });
 
-decimalButton.addEventListener("click", function () {
-  if (justCalculated) {
-    currentInput = "";
-    justCalculated = false;
-  }
-
-  if (!currentInput.includes(".")) {
-    currentInput += ".";
-    display.textContent = currentInput;
-  }
+document.addEventListener("keydown", (event) => {
+  if (/^[0-9]$/.test(event.key)) enterDigit(event.key);
+  else if (event.key === ".") enterDecimal();
+  else if (["+", "-", "*", "/"].includes(event.key)) {
+    event.preventDefault();
+    chooseOperator({ "+": "+", "-": "−", "*": "×", "/": "÷" }[event.key]);
+  } else if (event.key === "Enter" || event.key === "=") {
+    event.preventDefault();
+    equals();
+  } else if (event.key === "Escape" || event.key === "Backspace") clear();
 });
